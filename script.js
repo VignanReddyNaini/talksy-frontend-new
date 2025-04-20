@@ -37,7 +37,7 @@ function startSign() {
   function sendFrame() {
     if (!isSignActive) return;
     const frameData = captureFrame();
-    fetch('http://localhost:5000/predict', {
+    fetch('https://talksy-backend-fresh.onrender.com/predict', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ video: frameData })
