@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Talksy: Bridging Communication</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1 class="title">Talksy: Bridging Communication</h1>
+    <div class="columns">
+      <div class="column">
+        <video id="video" autoplay muted class="video"></video>
+        <div class="controls">
+          <p>Character: <span id="char">Empty</span></p>
+          <p>Word: <span id="word"></span></p>
+          <p>Sentence: <span id="sentence"></span></p>
+          <button onclick="startSign()">Start Sign</button>
+          <button onclick="stopSign()">Stop Sign</button>
+        </div>
+      </div>
+      <div class="column">
+        <div class="section">
+          <h2>Speech-to-Text</h2>
+          <p>Spoken Text: <span id="spokenText"></span></p>
+          <button onclick="startSpeech()">Start Speech</button>
+          <button onclick="stopSpeech()">Stop Speech</button>
+        </div>
+        <div class="section">
+          <h2>Text-to-Speech</h2>
+          <input type="text" id="ttsInput" placeholder="Type text here to speak">
+          <p id="ttsStatus">TTS Inactive</p>
+          <button onclick="startTts()">Start TTS</button>
+          <button onclick="stopTts()">Stop TTS</button>
+        </div>
+        <button onclick="clearAll()">Clear All</button>
+      </div>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
