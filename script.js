@@ -8,6 +8,8 @@ let ttsStatus = document.getElementById('ttsStatus');
 let isSignActive = false;
 let isSpeechActive = false;
 let isTtsActive = false;
+let retryCount = 0;
+const MAX_RETRIES = 3;
 
 // Initialize video stream
 if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -42,66 +44,88 @@ function captureFrame() {
   return canvas.toDataURL('image/jpeg');
 }
 
+// Send frame to API with retry mechanism
+async function sendFrameWithRetry(frameData) {
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetch('https://talksy-backend-fresh.onrender.com/predict', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        mode: 'cors',
+        cache: 'no-cache',
+        credentials: 'omit',
+        body: JSON.stringify({ video: frameData })
+      });
+      
+      console.log('API response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (err) {
+      console.error(`Attempt ${attempt + 1} failed:`, err);
+      
+      if (attempt === MAX_RETRIES - 1) {
+        throw err; // Rethrow if all retries failed
+      }
+      
+      // Wait before retrying (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
+    }
+  }
+}
+
 // Start sign detection
 function startSign() {
   isSignActive = true;
   sentence.textContent = 'Starting sign detection...';
+  retryCount = 0;
   
-  function sendFrame() {
+  async function processFrame() {
     if (!isSignActive) return;
     
-    // Debug info
-    console.log('Preparing to send frame...');
-    
-    const frameData = captureFrame();
-    console.log('Frame captured, sending to API...');
-    
-    // Perform API request with enhanced error handling
-    fetch('https://talksy-backend-fresh.onrender.com/predict', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      mode: 'cors',
-      credentials: 'omit',
-      body: JSON.stringify({ video: frameData })
-    })
-    .then(response => {
-      console.log('API response status:', response.status);
-      if (!response.ok) {
-        throw new Error(`Server responded with status: ${response.status}`);
-      }
-      return response.json();
-    })
-    .then(data => {
+    try {
+      console.log('Preparing to send frame...');
+      const frameData = captureFrame();
+      console.log('Frame captured, sending to API...');
+      
+      const data = await sendFrameWithRetry(frameData);
+      
       console.log('Prediction data received:', data);
       char.textContent = data.char || 'Empty';
       word.textContent = data.word || '';
       sentence.textContent = data.sentence || '';
-    })
-    .catch(err => {
-      console.error('Detailed fetch error:', err);
-      sentence.textContent = 'Connection error - please try again';
-      // Try to continue despite error
-    });
+      retryCount = 0; // Reset retry count on success
+    } catch (err) {
+      console.error('Frame processing error:', err);
+      retryCount++;
+      
+      if (retryCount > MAX_RETRIES) {
+        sentence.textContent = 'Connection error - backend may be offline';
+        // Don't immediately try again, wait for next scheduled attempt
+      } else {
+        sentence.textContent = `Connection error - retry ${retryCount}/${MAX_RETRIES}`;
+      }
+    }
+    
+    // Schedule next frame if still active
+    if (isSignActive) {
+      setTimeout(processFrame, 1000);
+    }
   }
   
-  // Call once immediately
-  sendFrame();
-  
-  // Then set interval
-  const intervalId = setInterval(sendFrame, 1000);
-  window.stopSignInterval = () => {
-    clearInterval(intervalId);
-    console.log('Sign detection stopped');
-  };
+  // Start processing frames
+  processFrame();
 }
 
 // Stop sign detection
 function stopSign() {
   isSignActive = false;
-  if (window.stopSignInterval) window.stopSignInterval();
   char.textContent = 'Empty';
   word.textContent = '';
   sentence.textContent = 'Sign detection stopped';
@@ -180,12 +204,24 @@ function clearAll() {
 
 // Test backend connection on page load
 window.addEventListener('load', function() {
-  fetch('https://talksy-backend-fresh.onrender.com/')
-    .then(response => response.json())
-    .then(data => {
-      console.log('Backend API connection test successful:', data);
-    })
-    .catch(err => {
-      console.error('Backend connection test failed:', err);
-    });
+  fetch('https://talksy-backend-fresh.onrender.com/', {
+    method: 'GET',
+    mode: 'cors',
+    cache: 'no-cache',
+    credentials: 'omit'
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`Server responded with status: ${response.status}`);
+    }
+    return response.json();
+  })
+  .then(data => {
+    console.log('Backend API connection test successful:', data);
+    sentence.textContent = 'Connected to backend';
+  })
+  .catch(err => {
+    console.error('Backend connection test failed:', err);
+    sentence.textContent = 'Backend connection failed - service may be initializing';
+  });
 });
