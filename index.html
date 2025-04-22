@@ -5,36 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Talksy: Bridging Communication</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
 <body>
   <div class="container">
     <h1 class="title">Talksy: Bridging Communication</h1>
     <div class="columns">
       <div class="column">
-        <video id="video" autoplay muted class="video"></video>
+        <video id="video" autoplay muted class="video" aria-label="Webcam feed for sign language detection"></video>
         <div class="controls">
           <p>Character: <span id="char">Empty</span></p>
           <p>Word: <span id="word"></span></p>
           <p>Sentence: <span id="sentence"></span></p>
-          <button onclick="startSign()">Start Sign</button>
-          <button onclick="stopSign()">Stop Sign</button>
+          <button onclick="startSign()" aria-label="Start sign language detection">Start Sign</button>
+          <button onclick="stopSign()" aria-label="Stop sign language detection">Stop Sign</button>
         </div>
       </div>
       <div class="column">
         <div class="section">
           <h2>Speech-to-Text</h2>
           <p>Spoken Text: <span id="spokenText"></span></p>
-          <button onclick="startSpeech()">Start Speech</button>
-          <button onclick="stopSpeech()">Stop Speech</button>
+          <button onclick="startSpeech()" aria-label="Start speech recognition">Start Speech</button>
+          <button onclick="stopSpeech()" aria-label="Stop speech recognition">Stop Speech</button>
         </div>
         <div class="section">
           <h2>Text-to-Speech</h2>
-          <input type="text" id="ttsInput" placeholder="Type text here to speak">
+          <input type="text" id="ttsInput" placeholder="Type text here to speak" aria-label="Text input for text-to-speech">
           <p id="ttsStatus">TTS Inactive</p>
-          <button onclick="startTts()">Start TTS</button>
-          <button onclick="stopTts()">Stop TTS</button>
+          <button onclick="startTts()" aria-label="Start text-to-speech">Start TTS</button>
+          <button onclick="stopTts()" aria-label="Stop text-to-speech">Stop TTS</button>
         </div>
-        <button onclick="clearAll()">Clear All</button>
+        <button onclick="clearAll()" aria-label="Clear all fields and stop processes">Clear All</button>
       </div>
     </div>
   </div>

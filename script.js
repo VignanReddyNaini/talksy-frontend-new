@@ -39,7 +39,12 @@ function startSign() {
     const frameData = captureFrame();
     fetch('https://talksy-backend-fresh.onrender.com/predict', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      mode: 'cors', // Explicitly set CORS mode
+      credentials: 'omit', // Don't send cookies
       body: JSON.stringify({ video: frameData })
     })
     .then(response => {
@@ -51,8 +56,13 @@ function startSign() {
       word.textContent = data.word || '';
       sentence.textContent = data.sentence || '';
     })
-    .catch(err => console.error('Error fetching prediction:', err));
+    .catch(err => {
+      console.error('Error fetching prediction:', err);
+      // Provide feedback to user about connection issues
+      sentence.textContent = 'Connection error - please try again later';
+    });
   }
+  
   sendFrame(); // Initial call
   const intervalId = setInterval(sendFrame, 1000); // Update every second
   window.stopSignInterval = () => clearInterval(intervalId);
