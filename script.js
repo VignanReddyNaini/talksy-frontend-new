@@ -11,19 +11,30 @@ let isTtsActive = false;
 
 // Initialize video stream
 if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-  navigator.mediaDevices.getUserMedia({ video: true, audio: false }) // No audio
+  navigator.mediaDevices.getUserMedia({ video: true, audio: false })
     .then(stream => {
       video.srcObject = stream;
     })
-    .catch(err => console.error('Error accessing media:', err));
+    .catch(err => {
+      console.error('Error accessing media:', err);
+      sentence.textContent = 'Camera access denied or unavailable';
+    });
 }
 
 // Capture video frame as base64
 function captureFrame() {
   const canvas = document.createElement('canvas');
-  canvas.width = 64;  // Match model input width
-  canvas.height = 64; // Match model input height
+  canvas.width = 64;
+  canvas.height = 64;
   const context = canvas.getContext('2d');
+  
+  // Handle case where video might not be ready
+  if (video.videoWidth === 0 || video.videoHeight === 0) {
+    context.fillStyle = 'gray';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg');
+  }
+  
   const scale = Math.min(canvas.width / video.videoWidth, canvas.height / video.videoHeight);
   const x = (canvas.width - video.videoWidth * scale) / 2;
   const y = (canvas.height - video.videoHeight * scale) / 2;
@@ -34,38 +45,57 @@ function captureFrame() {
 // Start sign detection
 function startSign() {
   isSignActive = true;
+  sentence.textContent = 'Starting sign detection...';
+  
   function sendFrame() {
     if (!isSignActive) return;
+    
+    // Debug info
+    console.log('Preparing to send frame...');
+    
     const frameData = captureFrame();
+    console.log('Frame captured, sending to API...');
+    
+    // Perform API request with enhanced error handling
     fetch('https://talksy-backend-fresh.onrender.com/predict', {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      mode: 'cors', // Explicitly set CORS mode
-      credentials: 'omit', // Don't send cookies
+      mode: 'cors',
+      credentials: 'omit',
       body: JSON.stringify({ video: frameData })
     })
     .then(response => {
-      if (!response.ok) throw new Error('Network response was not ok');
+      console.log('API response status:', response.status);
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
       return response.json();
     })
     .then(data => {
+      console.log('Prediction data received:', data);
       char.textContent = data.char || 'Empty';
       word.textContent = data.word || '';
       sentence.textContent = data.sentence || '';
     })
     .catch(err => {
-      console.error('Error fetching prediction:', err);
-      // Provide feedback to user about connection issues
-      sentence.textContent = 'Connection error - please try again later';
+      console.error('Detailed fetch error:', err);
+      sentence.textContent = 'Connection error - please try again';
+      // Try to continue despite error
     });
   }
   
-  sendFrame(); // Initial call
-  const intervalId = setInterval(sendFrame, 1000); // Update every second
-  window.stopSignInterval = () => clearInterval(intervalId);
+  // Call once immediately
+  sendFrame();
+  
+  // Then set interval
+  const intervalId = setInterval(sendFrame, 1000);
+  window.stopSignInterval = () => {
+    clearInterval(intervalId);
+    console.log('Sign detection stopped');
+  };
 }
 
 // Stop sign detection
@@ -74,7 +104,7 @@ function stopSign() {
   if (window.stopSignInterval) window.stopSignInterval();
   char.textContent = 'Empty';
   word.textContent = '';
-  sentence.textContent = '';
+  sentence.textContent = 'Sign detection stopped';
 }
 
 // Start speech recognition
@@ -147,3 +177,15 @@ function clearAll() {
   isSpeechActive = false;
   isTtsActive = false;
 }
+
+// Test backend connection on page load
+window.addEventListener('load', function() {
+  fetch('https://talksy-backend-fresh.onrender.com/')
+    .then(response => response.json())
+    .then(data => {
+      console.log('Backend API connection test successful:', data);
+    })
+    .catch(err => {
+      console.error('Backend connection test failed:', err);
+    });
+});
